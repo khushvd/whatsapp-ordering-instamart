@@ -175,7 +175,7 @@ Then double-click the launcher again. It rebuilds automatically on first run aft
 ### Stack
 - **Transport:** [Baileys](https://github.com/WhiskeySockets/Baileys) — in-process WhatsApp Web lib, no external service
 - **Language:** TypeScript, Node 22
-- **AI:** Google Gemini 2.5 Flash (voice transcription + Hindi/Hinglish list parsing)
+- **AI:** Google Gemini 3 Flash (voice transcription + Hindi/Hinglish list parsing)
 - **Ordering:** Swiggy Instamart MCP (`mcp.swiggy.com/im`) via OAuth PKCE
 - **Storage:** SQLite (WAL mode) via Node's built-in `node:sqlite`
 
