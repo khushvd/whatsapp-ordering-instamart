@@ -212,7 +212,7 @@ Fixed public `client_id: "swiggy-mcp"`, exact-match `redirect_uri` (no RFC 8252 
 
 ### Contributing
 
-This is a household project open-sourced as a flex — not an actively maintained product. PRs welcome but replies may be slow. Fork freely.
+This is a household project open-sourced and not an actively maintained product. PRs welcome but replies may be slow. Fork freely.
 
 </details>
 
