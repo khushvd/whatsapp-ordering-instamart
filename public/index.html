@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Ordering — Swiggy Instamart</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+        }
+        h1 {
+            color: #075e54;
+            margin-bottom: 1rem;
+        }
+        #qr-container {
+            margin: 2rem 0;
+            min-height: 264px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #status {
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .status-stopped { color: #dc2626; background: #fef2f2; }
+        .status-starting { color: #d97706; background: #fef3c7; }
+        .status-waiting { color: #d97706; background: #fef3c7; }
+        .status-ready { color: #059669; background: #d1fae5; }
+        .status-failed { color: #dc2626; background: #fef2f2; }
+
+        .actions {
+            margin: 1.5rem 0;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #075e54;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .logs {
+            text-align: left;
+            background: #1f2937;
+            color: #10b981;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            height: 150px;
+            overflow-y: auto;
+            margin-top: 2rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .metric {
+            background: #f9fafb;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .metric-value {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #075e54;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .config-panel {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+        }
+
+        .config-panel.visible {
+            display: block;
+        }
+
+        .config-panel h3 {
+            margin: 0 0 0.25rem 0;
+            font-size: 0.95rem;
+            color: #111827;
+        }
+
+        .config-panel .hint {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin: 0 0 0.75rem 0;
+        }
+
+        .config-panel details {
+            margin-bottom: 0.5rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+        }
+
+        .config-panel details[open] {
+            padding-bottom: 0.5rem;
+        }
+
+        .config-panel summary {
+            cursor: pointer;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .config-panel summary .count {
+            color: #6b7280;
+            font-weight: 400;
+            font-size: 0.75rem;
+        }
+
+        .config-panel .participant-list {
+            padding: 0 0.75rem 0.25rem 0.75rem;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .config-panel label.row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.3rem 0;
+            font-size: 0.8rem;
+            color: #374151;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .config-panel label.row:last-child {
+            border-bottom: none;
+        }
+
+        .config-panel label.row input[type="checkbox"] {
+            flex-shrink: 0;
+            accent-color: #075e54;
+        }
+
+        .config-panel label.row .admin-badge {
+            font-size: 0.65rem;
+            padding: 0.1rem 0.35rem;
+            background: #dbeafe;
+            color: #1e40af;
+            border-radius: 3px;
+            margin-left: auto;
+        }
+
+        .config-panel .config-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.75rem;
+            gap: 0.5rem;
+        }
+
+        .config-panel .save-status {
+            font-size: 0.75rem;
+            color: #6b7280;
+            flex: 1;
+        }
+
+        .config-panel .save-status.success {
+            color: #059669;
+        }
+
+        .config-panel .save-status.error {
+            color: #dc2626;
+        }
+
+        .config-panel .env-note {
+            font-size: 0.7rem;
+            color: #92400e;
+            background: #fef3c7;
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+        }
+
+        .privacy-strip {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.02em;
+            padding: 0.55rem 1rem;
+            text-align: center;
+            z-index: 100;
+            border-bottom: 1px solid #1f1f1f;
+        }
+        .privacy-strip strong {
+            color: #86efac;
+            font-weight: 600;
+        }
+
+        body { padding-top: 2.25rem; }
+
+        .setup-overlay {
+            position: fixed;
+            inset: 2.25rem 0 0 0;
+            background: #f0f2f5;
+            z-index: 50;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 2rem 1rem 4rem;
+            overflow-y: auto;
+        }
+        .setup-overlay[hidden] { display: none; }
+
+        .setup-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            max-width: 520px;
+            width: 100%;
+            padding: 2rem;
+            text-align: left;
+            position: relative;
+        }
+        .setup-card h2 {
+            color: #075e54;
+            margin: 0 0 0.25rem;
+            font-size: 1.35rem;
+        }
+        .setup-card .lede {
+            color: #4b5563;
+            font-size: 0.85rem;
+            margin: 0 0 1.5rem;
+        }
+
+        .step-nav {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .step-chip {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            background: #f3f4f6;
+            font-size: 0.75rem;
+            color: #6b7280;
+            border: 1px solid transparent;
+        }
+        .step-chip.active {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #10b981;
+        }
+        .step-chip.done {
+            color: #065f46;
+        }
+        .step-chip .num {
+            width: 20px; height: 20px;
+            border-radius: 50%;
+            background: #d1d5db;
+            color: white;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+        .step-chip.active .num { background: #10b981; }
+        .step-chip.done .num { background: #065f46; }
+
+        .step-body[hidden] { display: none; }
+        .step-body h3 {
+            margin: 0 0 0.5rem;
+            font-size: 1rem;
+            color: #111827;
+        }
+        .step-body .help {
+            font-size: 0.82rem;
+            color: #4b5563;
+            line-height: 1.5;
+            margin: 0 0 1rem;
+        }
+        .step-body .help a {
+            color: #075e54;
+            font-weight: 600;
+        }
+        .step-body input[type=text],
+        .step-body input[type=password] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+        }
+        .step-body input:focus {
+            outline: 2px solid #10b981;
+            outline-offset: 1px;
+        }
+        .step-body .row {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .step-body .row button { flex: 0 0 auto; }
+        .step-body .inline-error {
+            color: #b91c1c;
+            font-size: 0.78rem;
+            margin-top: 0.6rem;
+            min-height: 1rem;
+        }
+        .step-body .inline-ok {
+            color: #065f46;
+            font-size: 0.78rem;
+            margin-top: 0.6rem;
+        }
+
+        .step-body .qr-slot {
+            min-height: 264px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+            border-radius: 8px;
+        }
+
+        .setup-open-btn {
+            position: fixed;
+            top: 2.75rem;
+            right: 1rem;
+            z-index: 40;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        .setup-open-btn:hover { background: #1f1f1f; }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="privacy-strip">
+        <strong>Everything stays on your laptop.</strong>
+        No server, no cloud &mdash; your Gemini key, WhatsApp session, Swiggy login, and orders all live in <code>./data/</code>.
+        <strong>Keep the launcher window open</strong> &mdash; closing it stops the bot.
+    </div>
+
+    <button id="btn-open-setup" class="setup-open-btn" type="button" hidden onclick="openSetup()">Setup</button>
+
+    <div id="setup-overlay" class="setup-overlay" hidden>
+        <div class="setup-card">
+            <button id="btn-close-setup" type="button" onclick="closeSetup()" hidden
+                style="position:absolute; top:3rem; right:1.25rem; background:transparent; border:none; font-size:1.5rem; color:#6b7280; cursor:pointer; line-height:1;">&times;</button>
+            <h2>Set up the bot</h2>
+            <p class="lede">Three quick steps &mdash; all stored on your laptop.</p>
+
+            <div class="step-nav">
+                <div id="chip-1" class="step-chip active"><span class="num">1</span><span>Gemini key</span></div>
+                <div id="chip-2" class="step-chip"><span class="num">2</span><span>WhatsApp</span></div>
+                <div id="chip-3" class="step-chip"><span class="num">3</span><span>Swiggy</span></div>
+            </div>
+
+            <div id="step-1" class="step-body">
+                <h3>Paste your Gemini API key</h3>
+                <p class="help">
+                    Get one free at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> — sign in with any Google account and click "Create API key". The key stays on your laptop; we never see it.
+                </p>
+                <input id="gemini-key-input" type="password" placeholder="AIza..." autocomplete="off" spellcheck="false" />
+                <div class="row">
+                    <button class="btn-primary" type="button" onclick="saveGeminiKey()">Save & validate</button>
+                </div>
+                <div id="gemini-key-msg" class="inline-error"></div>
+            </div>
+
+            <div id="step-2" class="step-body" hidden>
+                <h3>Connect your WhatsApp</h3>
+                <p class="help">
+                    Open WhatsApp on your phone → Settings → Linked Devices → Link a Device → scan the QR below.
+                </p>
+                <div id="setup-qr-slot" class="qr-slot"><span class="help">Starting session...</span></div>
+                <div id="setup-qr-msg" class="inline-error"></div>
+            </div>
+
+            <div id="step-3" class="step-body" hidden>
+                <h3>Connect Swiggy</h3>
+                <p class="help">
+                    Click below. A new tab opens to Swiggy's sign-in. After you sign in, your browser will try to load a URL that <strong>fails to open</strong> (it says "site can't be reached" or similar — that's expected). Copy the full URL from the address bar and paste it here.
+                </p>
+                <div class="row">
+                    <button id="btn-swiggy-begin" class="btn-primary" type="button" onclick="beginSwiggyAuth()">Open Swiggy login</button>
+                </div>
+                <input id="swiggy-callback-input" type="text" placeholder="http://localhost/callback?code=...&state=..." autocomplete="off" spellcheck="false" style="margin-top:0.75rem;" />
+                <div class="row">
+                    <button class="btn-primary" type="button" onclick="completeSwiggyAuth()">Paste & finish</button>
+                </div>
+                <div id="swiggy-msg" class="inline-error"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Ordering Bot</h1>
+        <div id="status" class="status-starting">Initializing...</div>
+        <div id="qr-container"></div>
+        <p id="instructions">Open WhatsApp > Settings > Linked Devices > Link a Device</p>
+
+        <div class="actions">
+            <button id="btn-start" class="btn-primary" onclick="startSession()">Start Session</button>
+            <button id="btn-stop" class="btn-secondary" onclick="stopSession()">Stop Session</button>
+            <button id="btn-logout" class="btn-danger" onclick="logout()">Logout</button>
+        </div>
+
+        <div id="config-panel" class="config-panel">
+            <h3>Allowlist</h3>
+            <p class="hint">Only messages from these groups (and senders within them) trigger the bot.</p>
+            <div id="config-env-note" class="env-note" style="display:none;"></div>
+            <div id="config-search-row" style="display:none; margin-bottom:0.5rem;">
+                <input
+                    id="config-search"
+                    type="search"
+                    placeholder="Filter groups by name..."
+                    style="width:100%; box-sizing:border-box; padding:0.4rem 0.6rem; font-size:0.8rem; border:1px solid #d1d5db; border-radius:4px;"
+                />
+            </div>
+            <div id="config-groups">
+                <p class="hint" style="margin:0.5rem 0;">Loading groups...</p>
+            </div>
+            <div id="config-load-more-row" style="display:none; text-align:center; margin-top:0.5rem;">
+                <button id="btn-config-load-more" class="btn-secondary" type="button" onclick="loadMoreGroups()" style="font-size:0.75rem; padding:0.35rem 0.75rem;"></button>
+            </div>
+            <div class="config-actions">
+                <span id="config-save-status" class="save-status"></span>
+                <button id="btn-config-refresh" class="btn-secondary" type="button" onclick="loadConfigAndGroups(true)">Refresh</button>
+                <button id="btn-config-save" class="btn-primary" type="button" onclick="saveConfig()">Save</button>
+            </div>
+            <div id="whatsapp-test-tip" class="env-note" style="display:none; background:#ecfdf5; color:#065f46; margin-top:0.75rem;">
+                <strong>Test it:</strong> in WhatsApp, open the group you just ticked and send <code>!help</code> from your own phone number. The bot will reply with the full command list &mdash; that confirms everything is wired up.
+            </div>
+        </div>
+
+        <div class="logs" id="logs">
+            <div>> Initializing...</div>
+        </div>
+
+        <div class="metrics" id="metrics">
+            <div class="metric">Messages: <span class="metric-value" id="metric-messages">0</span></div>
+            <div class="metric">Searches: <span class="metric-value" id="metric-searches">0</span></div>
+            <div class="metric">Added: <span class="metric-value" id="metric-added">0</span></div>
+            <div class="metric">Uptime: <span class="metric-value" id="metric-uptime">0s</span></div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentStatus = 'STOPPED';
+        let qrCode = null;
+        let pollingInterval = null;
+        const CONFIG_PAGE_SIZE = 30;
+        let configState = {
+            envGroups: [],
+            envSenders: [],
+            selectedGroups: new Set(),
+            selectedSenders: new Set(),
+            groupsData: [],
+            loadedForStatus: null,
+            searchTerm: '',
+            renderLimit: CONFIG_PAGE_SIZE,
+        };
+
+        // DOM Elements
+        const qrContainer = document.getElementById('qr-container');
+        const statusEl = document.getElementById('status');
+        const logsEl = document.getElementById('logs');
+        const instructionsEl = document.getElementById('instructions');
+        const btnStart = document.getElementById('btn-start');
+        const btnStop = document.getElementById('btn-stop');
+        const btnLogout = document.getElementById('btn-logout');
+        const configPanel = document.getElementById('config-panel');
+        const configGroupsEl = document.getElementById('config-groups');
+        const configSaveStatusEl = document.getElementById('config-save-status');
+        const configEnvNoteEl = document.getElementById('config-env-note');
+
+        // Socket.io for real-time updates
+        const socket = io();
+
+        function log(msg) {
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            div.textContent = `[${time}] ${msg}`;
+            logsEl.appendChild(div);
+            logsEl.scrollTop = logsEl.scrollHeight;
+
+            // Keep only last 50 logs
+            while (logsEl.children.length > 50) {
+                logsEl.removeChild(logsEl.firstChild);
+            }
+        }
+
+        function updateStatus(status, opts = {}) {
+            currentStatus = status;
+            statusEl.className = '';
+            btnStart.textContent = 'Start Session';
+            if (status !== 'WORKING') {
+                hideConfigPanel();
+            }
+
+            switch (status) {
+                case 'STOPPED':
+                    statusEl.textContent = 'Session Stopped';
+                    statusEl.classList.add('status-stopped');
+                    instructionsEl.textContent = 'Click "Start Session" to begin';
+                    qrContainer.innerHTML = '';
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                    btnLogout.disabled = true;
+                    break;
+                case 'STARTING':
+                    statusEl.textContent = opts.bootstrapping ? 'Connecting...' : 'Starting...';
+                    statusEl.classList.add('status-starting');
+                    instructionsEl.textContent = opts.bootstrapping
+                        ? 'Waiting for WhatsApp service to come online...'
+                        : 'Please wait...';
+                    qrContainer.innerHTML = '<div class="spinner"></div>';
+                    btnStart.disabled = true;
+                    btnStop.disabled = true;
+                    btnLogout.disabled = true;
+                    break;
+                case 'SCAN_QR_CODE':
+                    statusEl.textContent = 'Scan QR Code';
+                    statusEl.classList.add('status-waiting');
+                    instructionsEl.textContent = 'Open WhatsApp > Settings > Linked Devices > Link a Device';
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                    btnLogout.disabled = true;
+                    break;
+                case 'WORKING':
+                    statusEl.textContent = 'Connected';
+                    statusEl.classList.add('status-ready');
+                    instructionsEl.textContent = 'Bot is ready to receive messages';
+                    qrContainer.innerHTML = '<div style="font-size: 4rem;">✅</div><p>WhatsApp Connected</p>';
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                    btnLogout.disabled = false;
+                    showConfigPanel();
+                    break;
+                case 'FAILED':
+                    statusEl.textContent = 'QR Expired';
+                    statusEl.classList.add('status-failed');
+                    instructionsEl.textContent = 'The QR code timed out. Click "Get New QR" to retry.';
+                    qrContainer.innerHTML = '';
+                    btnStart.textContent = 'Get New QR';
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                    btnLogout.disabled = false;
+                    break;
+                default:
+                    statusEl.textContent = status;
+                    statusEl.classList.add('status-starting');
+            }
+        }
+
+        function displayQR(qr) {
+            if (!qr || qr === qrCode) return;
+            qrCode = qr;
+
+            const targets = [qrContainer, document.getElementById('setup-qr-slot')].filter(Boolean);
+            for (const target of targets) {
+                target.innerHTML = '';
+                if (qr.startsWith('data:image')) {
+                    const img = document.createElement('img');
+                    img.src = qr;
+                    img.width = 256;
+                    img.height = 256;
+                    img.style.borderRadius = '8px';
+                    target.appendChild(img);
+                } else {
+                    new QRCode(target, {
+                        text: qr,
+                        width: 256,
+                        height: 256,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff'
+                    });
+                }
+            }
+            log('New QR code displayed');
+        }
+
+        function updateMetrics(data) {
+            document.getElementById('metric-messages').textContent = data.messagesReceived || 0;
+            document.getElementById('metric-searches').textContent = data.searchesPerformed || 0;
+            document.getElementById('metric-added').textContent = data.productsAdded || 0;
+
+            const uptime = data.uptime || 0;
+            let uptimeStr;
+            if (uptime < 60) uptimeStr = `${uptime}s`;
+            else if (uptime < 3600) uptimeStr = `${Math.floor(uptime/60)}m`;
+            else uptimeStr = `${Math.floor(uptime/3600)}h ${Math.floor((uptime%3600)/60)}m`;
+            document.getElementById('metric-uptime').textContent = uptimeStr;
+        }
+
+        function hideConfigPanel() {
+            configPanel.classList.remove('visible');
+            configState.loadedForStatus = null;
+        }
+
+        function showConfigPanel() {
+            configPanel.classList.add('visible');
+            if (configState.loadedForStatus !== 'WORKING') {
+                loadConfigAndGroups();
+            }
+        }
+
+        function setSaveStatus(text, kind = '') {
+            configSaveStatusEl.textContent = text;
+            configSaveStatusEl.className = 'save-status' + (kind ? ' ' + kind : '');
+        }
+
+        async function loadConfigAndGroups(forceRefresh = false) {
+            configState.loadedForStatus = 'WORKING';
+            setSaveStatus(forceRefresh ? 'Refreshing from WhatsApp...' : 'Loading...');
+            configGroupsEl.innerHTML = '<p class="hint" style="margin:0.5rem 0;">Loading groups...</p>';
+
+            try {
+                const groupsUrl = forceRefresh ? '/api/groups?refresh=true' : '/api/groups';
+                const [configRes, groupsRes] = await Promise.all([
+                    fetch('/api/config'),
+                    fetch(groupsUrl),
+                ]);
+
+                if (!configRes.ok) throw new Error('Failed to load config: ' + configRes.status);
+                if (!groupsRes.ok) throw new Error('Failed to load groups: ' + groupsRes.status);
+
+                const configData = await configRes.json();
+                const groupsData = await groupsRes.json();
+
+                configState.envGroups = configData.env?.groups || [];
+                configState.envSenders = configData.env?.senders || [];
+                configState.groupsData = (groupsData.groups || []).slice().sort((a, b) => {
+                    return (a.subject || '').toLowerCase().localeCompare((b.subject || '').toLowerCase());
+                });
+                configState.searchTerm = '';
+                configState.renderLimit = CONFIG_PAGE_SIZE;
+
+                const storedGroups = configData.stored?.allowedGroups || [];
+                const storedSenders = configData.stored?.allowedSenders || [];
+
+                // If nothing stored yet, preselect env values (so first save preserves them verbatim).
+                const initialGroups = storedGroups.length > 0 ? storedGroups : configState.envGroups;
+                const initialSenders = storedSenders.length > 0 ? storedSenders : configState.envSenders;
+
+                configState.selectedGroups = new Set(initialGroups);
+                configState.selectedSenders = new Set(initialSenders);
+
+                renderEnvNote();
+                renderGroupsList();
+                document.getElementById('config-search-row').style.display = configState.groupsData.length > 0 ? 'block' : 'none';
+                const searchInput = document.getElementById('config-search');
+                searchInput.value = '';
+                searchInput.oninput = (ev) => {
+                    configState.searchTerm = (ev.target.value || '').trim().toLowerCase();
+                    configState.renderLimit = CONFIG_PAGE_SIZE;
+                    renderGroupsList();
+                };
+                setSaveStatus(configData.stored ? 'Loaded from saved config.' : 'No saved config yet — defaults shown.');
+
+                const tip = document.getElementById('whatsapp-test-tip');
+                if (tip) {
+                    const groupsActive = configData.effective?.groups?.length || 0;
+                    const sendersActive = configData.effective?.senders?.length || 0;
+                    tip.style.display = (groupsActive > 0 && sendersActive > 0) ? 'block' : 'none';
+                }
+            } catch (e) {
+                configGroupsEl.innerHTML = '<p class="hint" style="color:#dc2626;">Failed to load: ' + e.message + '</p>';
+                setSaveStatus('Load failed.', 'error');
+            }
+        }
+
+        function renderEnvNote() {
+            const hasEnv = configState.envGroups.length > 0 || configState.envSenders.length > 0;
+            if (!hasEnv) {
+                configEnvNoteEl.style.display = 'none';
+                return;
+            }
+            configEnvNoteEl.style.display = 'block';
+            configEnvNoteEl.textContent =
+                'Env variables provide defaults (' +
+                configState.envGroups.length + ' group(s), ' +
+                configState.envSenders.length + ' sender(s)). UI selections are merged with env values and persist in SQLite.';
+        }
+
+        function senderMatches(selectedSet, participant) {
+            // Selected values can be @c.us, @s.whatsapp.net, @lid, or a bare phone number.
+            const candidates = [
+                participant.id,
+                participant.phoneNumber,
+                (participant.phoneNumber || '').replace('@s.whatsapp.net', '@c.us'),
+                (participant.phoneNumber || '').replace('@s.whatsapp.net', '').replace(/\D/g, ''),
+                (participant.id || '').replace(/@.*$/, '').replace(/\D/g, ''),
+            ].filter(Boolean);
+
+            return candidates.some((c) => selectedSet.has(c));
+        }
+
+        function renderGroupCard(group) {
+            const details = document.createElement('details');
+            const groupIsSelected = configState.selectedGroups.has(group.id);
+            if (groupIsSelected) details.open = true;
+
+            const summary = document.createElement('summary');
+
+            const groupCheckbox = document.createElement('input');
+            groupCheckbox.type = 'checkbox';
+            groupCheckbox.checked = groupIsSelected;
+            groupCheckbox.addEventListener('click', (ev) => ev.stopPropagation());
+            groupCheckbox.addEventListener('change', () => {
+                if (groupCheckbox.checked) {
+                    configState.selectedGroups.add(group.id);
+                    details.open = true;
+                } else {
+                    configState.selectedGroups.delete(group.id);
+                }
+                renderGroupsList();
+            });
+
+            const groupLabel = document.createElement('span');
+            groupLabel.textContent = group.subject || group.id;
+
+            const countSpan = document.createElement('span');
+            countSpan.className = 'count';
+            countSpan.textContent = '(' + (group.participants?.length || group.size || 0) + ' members)';
+
+            summary.appendChild(groupCheckbox);
+            summary.appendChild(groupLabel);
+            summary.appendChild(countSpan);
+            details.appendChild(summary);
+
+            const list = document.createElement('div');
+            list.className = 'participant-list';
+
+            const sortedParticipants = (group.participants || [])
+                .slice()
+                .sort((a, b) => {
+                    const adminRank = (p) => (p.admin === 'superadmin' ? 0 : p.admin ? 1 : 2);
+                    return adminRank(a) - adminRank(b);
+                });
+
+            if (sortedParticipants.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'hint';
+                empty.style.margin = '0.5rem 0';
+                empty.textContent = 'No participant data available for this group.';
+                list.appendChild(empty);
+            } else {
+                for (const participant of sortedParticipants) {
+                    // Canonical key we save: @c.us form if available, else the @s.whatsapp.net phone number.
+                    const phoneRaw = (participant.phoneNumber || '').replace('@s.whatsapp.net', '');
+                    const canonical = phoneRaw
+                        ? phoneRaw + '@c.us'
+                        : (participant.id || '');
+
+                    if (!canonical) continue;
+
+                    const row = document.createElement('label');
+                    row.className = 'row';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.checked = senderMatches(configState.selectedSenders, participant);
+                    cb.addEventListener('change', () => {
+                        if (cb.checked) {
+                            configState.selectedSenders.add(canonical);
+                        } else {
+                            const rawPhone = (participant.phoneNumber || '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+                            configState.selectedSenders.delete(canonical);
+                            if (participant.id) configState.selectedSenders.delete(participant.id);
+                            if (participant.phoneNumber) configState.selectedSenders.delete(participant.phoneNumber);
+                            if (rawPhone) configState.selectedSenders.delete(rawPhone);
+                        }
+                    });
+
+                    // Prefer the WhatsApp display name (cached from inbound messages);
+                    // fall back to a phone number if real, or "Hidden contact" for @lid IDs.
+                    const isLidId = (participant.id || '').endsWith('@lid');
+                    const fallbackLabel = phoneRaw && !isLidId
+                        ? '+' + phoneRaw
+                        : isLidId
+                            ? 'Hidden contact'
+                            : (canonical || phoneRaw);
+                    const labelText = participant.displayName || fallbackLabel;
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = labelText;
+                    if (participant.displayName && isLidId) {
+                        // Add a subtle hint that this is a lid contact whose name we've seen.
+                        const hint = document.createElement('span');
+                        hint.style.cssText = 'color:#9ca3af; font-size:0.75rem; margin-left:0.4rem;';
+                        hint.textContent = '(WhatsApp lid)';
+                        nameSpan.appendChild(hint);
+                    } else if (isLidId && !participant.displayName) {
+                        nameSpan.style.color = '#6b7280';
+                        nameSpan.title = 'Member with privacy mode on. Name will appear after they message the group.';
+                    }
+
+                    row.appendChild(cb);
+                    row.appendChild(nameSpan);
+
+                    if (participant.admin) {
+                        const badge = document.createElement('span');
+                        badge.className = 'admin-badge';
+                        badge.textContent = participant.admin === 'superadmin' ? 'owner' : 'admin';
+                        row.appendChild(badge);
+                    }
+
+                    list.appendChild(row);
+                }
+            }
+
+            details.appendChild(list);
+            return details;
+        }
+
+        function renderSectionHeader(text) {
+            const header = document.createElement('div');
+            header.style.cssText = 'font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; color:#6b7280; margin:0.5rem 0 0.25rem 0; font-weight:600;';
+            header.textContent = text;
+            return header;
+        }
+
+        function renderGroupsList() {
+            const loadMoreRow = document.getElementById('config-load-more-row');
+            const loadMoreBtn = document.getElementById('btn-config-load-more');
+
+            if (configState.groupsData.length === 0) {
+                configGroupsEl.innerHTML = '<p class="hint">No WhatsApp groups found. The bot must be a member of a group to appear here.</p>';
+                loadMoreRow.style.display = 'none';
+                return;
+            }
+
+            const term = configState.searchTerm;
+            const selected = [];
+            const unselected = [];
+
+            for (const group of configState.groupsData) {
+                const matches = !term || (group.subject || '').toLowerCase().includes(term) || (group.id || '').toLowerCase().includes(term);
+                if (!matches) continue;
+
+                if (configState.selectedGroups.has(group.id)) {
+                    selected.push(group);
+                } else {
+                    unselected.push(group);
+                }
+            }
+
+            configGroupsEl.innerHTML = '';
+
+            if (selected.length > 0) {
+                configGroupsEl.appendChild(renderSectionHeader('Selected (' + selected.length + ')'));
+                for (const group of selected) {
+                    configGroupsEl.appendChild(renderGroupCard(group));
+                }
+            }
+
+            const unselectedHeaderText = term
+                ? 'Matches (' + unselected.length + ')'
+                : 'Groups (' + unselected.length + ')';
+
+            if (unselected.length > 0) {
+                configGroupsEl.appendChild(renderSectionHeader(unselectedHeaderText));
+                const visible = unselected.slice(0, configState.renderLimit);
+                for (const group of visible) {
+                    configGroupsEl.appendChild(renderGroupCard(group));
+                }
+
+                const remaining = unselected.length - visible.length;
+                if (remaining > 0) {
+                    loadMoreBtn.textContent = 'Show ' + Math.min(remaining, CONFIG_PAGE_SIZE) + ' more (' + remaining + ' remaining)';
+                    loadMoreRow.style.display = 'block';
+                } else {
+                    loadMoreRow.style.display = 'none';
+                }
+            } else {
+                loadMoreRow.style.display = 'none';
+                if (term && selected.length === 0) {
+                    const noMatch = document.createElement('p');
+                    noMatch.className = 'hint';
+                    noMatch.style.margin = '0.75rem 0';
+                    noMatch.textContent = 'No groups match "' + term + '".';
+                    configGroupsEl.appendChild(noMatch);
+                }
+            }
+        }
+
+        function loadMoreGroups() {
+            configState.renderLimit += CONFIG_PAGE_SIZE;
+            renderGroupsList();
+        }
+
+        async function saveConfig() {
+            setSaveStatus('Saving...');
+            const body = {
+                allowedGroups: Array.from(configState.selectedGroups),
+                allowedSenders: Array.from(configState.selectedSenders),
+            };
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || ('HTTP ' + response.status));
+
+                const groupsActive = data.effective?.groups?.length || 0;
+                const sendersActive = data.effective?.senders?.length || 0;
+                const count = groupsActive + ' group(s), ' + sendersActive + ' sender(s) active.';
+                setSaveStatus('Saved. ' + count, 'success');
+                log('Config saved: ' + count);
+
+                const tip = document.getElementById('whatsapp-test-tip');
+                if (tip) tip.style.display = (groupsActive > 0 && sendersActive > 0) ? 'block' : 'none';
+            } catch (e) {
+                setSaveStatus('Save failed: ' + e.message, 'error');
+            }
+        }
+
+        // Socket.io event handlers
+        socket.on('qr', (qr) => {
+            log('Received QR code via socket');
+            displayQR(qr);
+            updateStatus('SCAN_QR_CODE');
+        });
+
+        socket.on('ready', () => {
+            log('WhatsApp Connected!');
+            updateStatus('WORKING');
+        });
+
+        socket.on('session-status', (status) => {
+            log(`Session status: ${status.status}`);
+            updateStatus(status.status);
+        });
+
+        socket.on('log', (msg) => {
+            log(msg);
+        });
+
+        // API functions
+        async function fetchStatus() {
+            try {
+                const response = await fetch('/api/session-status');
+                const data = await response.json();
+
+                if (data.status !== currentStatus) {
+                    updateStatus(data.status, { bootstrapping: data.bootstrapping });
+                } else if (data.bootstrapping) {
+                    instructionsEl.textContent = 'Waiting for WhatsApp service to come online...';
+                }
+
+                if (data.qr && data.status === 'SCAN_QR_CODE') {
+                    displayQR(data.qr);
+                }
+            } catch (e) {
+                console.error('Failed to fetch status:', e);
+            }
+        }
+
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('/metrics');
+                const data = await response.json();
+                updateMetrics(data);
+            } catch (e) {
+                console.error('Failed to fetch metrics:', e);
+            }
+        }
+
+        async function startSession() {
+            log('Starting session...');
+            updateStatus('STARTING');
+
+            try {
+                const response = await fetch('/api/session/start', { method: 'POST' });
+                const data = await response.json();
+
+                if (response.ok) {
+                    log('Session start requested');
+                } else {
+                    log(`Failed to start: ${data.error}`);
+                    updateStatus('FAILED');
+                }
+            } catch (e) {
+                log(`Error starting session: ${e.message}`);
+                updateStatus('FAILED');
+            }
+        }
+
+        async function stopSession() {
+            log('Stopping session...');
+
+            try {
+                const response = await fetch('/api/session/stop', { method: 'POST' });
+                if (response.ok) {
+                    log('Session stopped');
+                    updateStatus('STOPPED');
+                    qrCode = null;
+                }
+            } catch (e) {
+                log(`Error stopping session: ${e.message}`);
+            }
+        }
+
+        async function logout() {
+            if (!confirm('Are you sure you want to logout? You will need to scan QR code again.')) {
+                return;
+            }
+
+            log('Logging out...');
+
+            try {
+                const response = await fetch('/api/session/logout', { method: 'POST' });
+                if (response.ok) {
+                    log('Logged out successfully');
+                    updateStatus('STOPPED');
+                    qrCode = null;
+                }
+            } catch (e) {
+                log(`Error logging out: ${e.message}`);
+            }
+        }
+
+        // --- First-run setup overlay ---
+        const setupState = {
+            geminiOk: false,
+            whatsappOk: false,
+            swiggyOk: false,
+            manuallyOpen: false,
+        };
+
+        function setStepMsg(id, text, kind) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = text || '';
+            el.className = kind === 'ok' ? 'inline-ok' : 'inline-error';
+        }
+
+        function showStep(n) {
+            for (const i of [1, 2, 3]) {
+                const body = document.getElementById('step-' + i);
+                const chip = document.getElementById('chip-' + i);
+                if (body) body.hidden = (i !== n);
+                if (chip) {
+                    chip.classList.remove('active', 'done');
+                    if (i < n) chip.classList.add('done');
+                    if (i === n) chip.classList.add('active');
+                }
+            }
+        }
+
+        function renderSetup() {
+            const overlay = document.getElementById('setup-overlay');
+            const openBtn = document.getElementById('btn-open-setup');
+            if (!overlay || !openBtn) return;
+
+            const allDone = setupState.geminiOk && setupState.whatsappOk && setupState.swiggyOk;
+
+            const closeBtn = document.getElementById('btn-close-setup');
+            if (closeBtn) closeBtn.hidden = !setupState.manuallyOpen;
+
+            if (allDone && !setupState.manuallyOpen) {
+                overlay.hidden = true;
+                openBtn.hidden = false;
+                return;
+            }
+
+            overlay.hidden = false;
+            openBtn.hidden = true;
+
+            let step = 1;
+            if (setupState.geminiOk) step = 2;
+            if (setupState.geminiOk && setupState.whatsappOk) step = 3;
+            showStep(step);
+
+            if (step === 2 && currentStatus !== 'WORKING' && currentStatus !== 'SCAN_QR_CODE' && currentStatus !== 'STARTING') {
+                startSession().catch(() => {});
+            }
+        }
+
+        async function refreshSetupState() {
+            try {
+                const [keyRes, mcpRes] = await Promise.all([
+                    fetch('/api/gemini-key').then((r) => r.json()),
+                    fetch('/api/mcp/status').then((r) => r.json()),
+                ]);
+                setupState.geminiOk = Boolean(keyRes.isSet);
+                setupState.whatsappOk = currentStatus === 'WORKING';
+                setupState.swiggyOk = mcpRes.state === 'authenticated' && (!mcpRes.expiresInSeconds || mcpRes.expiresInSeconds > 0);
+            } catch (e) {
+                console.error('refreshSetupState failed', e);
+            }
+            renderSetup();
+        }
+
+        function openSetup() {
+            setupState.manuallyOpen = true;
+            renderSetup();
+        }
+
+        function closeSetup() {
+            setupState.manuallyOpen = false;
+            renderSetup();
+        }
+
+        async function saveGeminiKey() {
+            const input = document.getElementById('gemini-key-input');
+            const key = (input?.value || '').trim();
+            setStepMsg('gemini-key-msg', 'Validating key...', 'ok');
+            try {
+                const res = await fetch('/api/gemini-key', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ key }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.ok) {
+                    setStepMsg('gemini-key-msg', data.reason || 'That did not work. Try again.', 'err');
+                    return;
+                }
+                setStepMsg('gemini-key-msg', '', 'ok');
+                input.value = '';
+                setupState.geminiOk = true;
+                renderSetup();
+            } catch (e) {
+                setStepMsg('gemini-key-msg', 'Network error. Is the bot still running?', 'err');
+            }
+        }
+
+        async function beginSwiggyAuth() {
+            setStepMsg('swiggy-msg', 'Opening Swiggy login in a new tab...', 'ok');
+            try {
+                const res = await fetch('/api/mcp/begin-auth', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok || !data.ok) {
+                    setStepMsg('swiggy-msg', data.reason || 'Could not start Swiggy login.', 'err');
+                    return;
+                }
+                window.open(data.authUrl, '_blank', 'noopener');
+                setStepMsg('swiggy-msg', 'Sign in, then copy the URL your browser tried to load (it will fail — that is expected) and paste it below.', 'ok');
+            } catch (e) {
+                setStepMsg('swiggy-msg', 'Network error. Is the bot still running?', 'err');
+            }
+        }
+
+        async function completeSwiggyAuth() {
+            const input = document.getElementById('swiggy-callback-input');
+            const callbackUrl = (input?.value || '').trim();
+            if (!callbackUrl) {
+                setStepMsg('swiggy-msg', 'Paste the full URL from your browser first.', 'err');
+                return;
+            }
+            setStepMsg('swiggy-msg', 'Completing...', 'ok');
+            try {
+                const res = await fetch('/api/mcp/complete-auth', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ callbackUrl }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.ok) {
+                    setStepMsg('swiggy-msg', data.reason || 'Could not finish Swiggy login.', 'err');
+                    return;
+                }
+                setStepMsg('swiggy-msg', '', 'ok');
+                input.value = '';
+                setupState.swiggyOk = true;
+                setupState.manuallyOpen = false;
+                renderSetup();
+            } catch (e) {
+                setStepMsg('swiggy-msg', 'Network error. Is the bot still running?', 'err');
+            }
+        }
+
+        // When WhatsApp session reaches WORKING, auto-advance setup.
+        socket.on('ready', () => {
+            setupState.whatsappOk = true;
+            renderSetup();
+        });
+        socket.on('session-status', (status) => {
+            if (status?.status === 'WORKING') {
+                setupState.whatsappOk = true;
+                renderSetup();
+            }
+        });
+
+        // Initialize
+        async function init() {
+            log('Connecting to server...');
+
+            // Initial status fetch
+            await fetchStatus();
+            await fetchMetrics();
+            await refreshSetupState();
+
+            // Start polling for status and metrics
+            pollingInterval = setInterval(async () => {
+                await fetchStatus();
+                await fetchMetrics();
+            }, 3000);
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>

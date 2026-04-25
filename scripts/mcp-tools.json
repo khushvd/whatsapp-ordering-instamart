@@ -1,0 +1,429 @@
+{
+  "tools": [
+    {
+      "name": "get_addresses",
+      "description": "Swiggy (Instamart/Food): Get all saved delivery addresses for the authenticated Swiggy user, sorted by last order date. This tool works for Swiggy Instamart and Food services. Addresses are returned WITHOUT coordinates (latitude/longitude) for privacy protection. No parameters needed - authentication is handled automatically.\n\n📍 IMPORTANT — STOP here and let the user choose:\n1. Show the address list to the user\n2. Ask: \"Which address would you like to use for delivery?\"\n3. Do NOT call any other tool until the user has selected an address\n4. Remember the selected addressId for all subsequent operations\n5. If no addresses are returned, inform the user that they need to add an address first",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "annotations": {
+        "title": "Get Delivery Addresses",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "create_address",
+      "description": "Swiggy (Instamart/Food): Create a new delivery address for the authenticated user.\n\n📍 WORKFLOW - What to ASK the user:\n1. Ask: \"What is your complete delivery address?\" (Get the full address as a single string)\n2. Ask: \"What is the latitude of your address?\"\n3. Ask: \"What is the longitude of your address?\"\n4. Ask: \"What is your name?\"\n5. Ask: \"What is your phone number?\"\n6. Ask: \"What type of address is this?\" (Options: HOME, WORK, OFFICE, FRIENDS_AND_FAMILY, or OTHER)\n7. Ask (optional): \"Would you like to give a name/label to this address?\" (e.g., \"My Home\", \"Office\")\n8. Ask: \"Is this address for you or someone else?\"\n   - If for someone else: Ask for the receiver's name and phone number\n\n🤖 AUTOMATIC PARSING - What YOU must do (DO NOT ask user for these):\nAfter getting the full address, YOU must automatically parse it and extract:\n- addressLine: Main street/building/house number (REQUIRED - extract from full address)\n- addressLine2: Apartment/floor/wing/additional details (REQUIRED - extract from full address)\n- city: City name (REQUIRED - extract from full address)\n- postalCode: Postal/ZIP code (REQUIRED - extract from full address)\n- locality: Area/neighborhood (optional - extract if available)\n\n⚠️ CRITICAL RULES:\n- NEVER ask the user to provide addressLine, addressLine2, city, or postalCode separately\n- YOU parse the full address and extract these components automatically\n- The user provides: full address, latitude, longitude, name, phone, address type, optional tag, and receiver details if applicable\n- Account details (userName, userPhone) are ALWAYS the authenticated user\n- Receiver details (receiverName, receiverPhone) are only used when delivering to someone else",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fullAddress": {
+            "type": "string",
+            "description": "Complete address as provided by the user"
+          },
+          "addressLine": {
+            "type": "string",
+            "description": "Main street/building/house number (REQUIRED)"
+          },
+          "addressLine2": {
+            "type": "string",
+            "description": "Apartment, floor, wing, or additional details (REQUIRED - extract from full address, use empty string \"\" if not found)"
+          },
+          "locality": {
+            "type": "string",
+            "description": "Area, neighborhood, or locality name (optional)"
+          },
+          "city": {
+            "type": "string",
+            "description": "City name (REQUIRED)"
+          },
+          "postalCode": {
+            "type": "string",
+            "description": "Postal/ZIP code (REQUIRED)"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Latitude coordinate of the address (REQUIRED)"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "Longitude coordinate of the address (REQUIRED)"
+          },
+          "addressCategory": {
+            "type": "string",
+            "enum": [
+              "HOME",
+              "WORK",
+              "OFFICE",
+              "FRIENDS_AND_FAMILY",
+              "OTHER"
+            ],
+            "description": "Type of address: HOME, WORK, OFFICE, FRIENDS_AND_FAMILY, or OTHER (REQUIRED)"
+          },
+          "addressTag": {
+            "type": "string",
+            "description": "Friendly name/label for the address (e.g., \"My Home\", \"Office\", \"Mom's Place\") (optional)"
+          },
+          "userName": {
+            "type": "string",
+            "description": "Account holder name (authenticated user) (REQUIRED)"
+          },
+          "userPhone": {
+            "type": "string",
+            "description": "Account holder phone number (authenticated user) (REQUIRED)"
+          },
+          "receiverName": {
+            "type": "string",
+            "description": "Receiver name if delivering to someone else (optional)"
+          },
+          "receiverPhone": {
+            "type": "string",
+            "description": "Receiver phone if delivering to someone else (optional)"
+          }
+        },
+        "required": [
+          "fullAddress",
+          "addressLine",
+          "addressLine2",
+          "city",
+          "postalCode",
+          "latitude",
+          "longitude",
+          "addressCategory",
+          "userName",
+          "userPhone"
+        ]
+      },
+      "annotations": {
+        "title": "Create Delivery Address",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "delete_address",
+      "description": "Swiggy (Instamart/Food): Delete a saved delivery address for the authenticated user.\n\n📍 WORKFLOW:\n1. First call get_addresses to show the user their saved addresses\n2. Ask the user which address they want to delete\n3. Get the addressId from the user's selection\n4. Call this tool with the addressId\n\n⚠️ WARNING: This action is permanent and cannot be undone. Always confirm with the user before deleting.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "description": "The ID of the address to delete (from get_addresses response)"
+          }
+        },
+        "required": [
+          "addressId"
+        ]
+      },
+      "annotations": {
+        "title": "Delete Delivery Address",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "search_products",
+      "description": "Search for products available at the selected address. Returns products with their variants (e.g., different pack sizes, quantities). When a user asks to add a product, ALWAYS search first to see available variants, then ask the user which specific variant they want before adding to cart. Authentication is handled automatically. Use the addressId from get_addresses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "description": "Address ID from get_addresses tool"
+          },
+          "query": {
+            "type": "string",
+            "description": "Search query (product name, category, or brand)"
+          },
+          "offset": {
+            "type": "number",
+            "description": "Pagination offset (default: 0)"
+          }
+        },
+        "required": [
+          "addressId",
+          "query"
+        ]
+      },
+      "annotations": {
+        "title": "Search Products",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "your_go_to_items",
+      "description": "Fetch the user's Your Go To Items (frequently or recently ordered items) for the selected delivery address. Use addressId from get_addresses. Returns products with variants; use spinId from the chosen variant when adding to cart.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "description": "Address ID from get_addresses tool"
+          },
+          "offset": {
+            "type": "number",
+            "description": "Pagination offset (default: 0)"
+          }
+        },
+        "required": [
+          "addressId"
+        ]
+      },
+      "annotations": {
+        "title": "Your Go To Items",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_cart",
+      "description": "Swiggy Instamart (Grocery): Get current Swiggy Instamart grocery cart with all items and bill breakdown. Use this for Instamart grocery orders, NOT for Food delivery. Authentication is handled automatically.\n\n💳 PAYMENT METHODS: The response includes an \"availablePaymentMethods\" array in data. Display whatever payment method(s) are returned to the user before placing the order. Do not mention or assume any payment option that is not in the response.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "annotations": {
+        "title": "Get Cart",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "update_cart",
+      "description": "Swiggy Instamart (Grocery): Update Swiggy Instamart grocery cart with items. Replaces entire cart with the provided items. Use this for Instamart grocery orders, NOT for Food delivery. Authentication is handled automatically. Use addressId from get_addresses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "selectedAddressId": {
+            "type": "string",
+            "description": "Selected delivery address ID from get_addresses tool"
+          },
+          "items": {
+            "type": "array",
+            "description": "Array of items to add to cart",
+            "items": {
+              "type": "object",
+              "properties": {
+                "spinId": {
+                  "type": "string",
+                  "description": "Product SPIN ID from search results"
+                },
+                "quantity": {
+                  "type": "number",
+                  "description": "Quantity of the item"
+                }
+              },
+              "required": [
+                "spinId",
+                "quantity"
+              ]
+            }
+          }
+        },
+        "required": [
+          "selectedAddressId",
+          "items"
+        ]
+      },
+      "annotations": {
+        "title": "Update Cart",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "clear_cart",
+      "description": "Clear (remove all items from) the Instamart cart. Authentication is handled automatically.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "annotations": {
+        "title": "Clear Cart",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "checkout",
+      "description": "Swiggy Instamart (Grocery): Place and confirm Swiggy Instamart grocery order. Creates order and confirms payment in a single operation. Use this for Instamart grocery orders, NOT for Food delivery.\n\n🛒 MULTI-STORE SUPPORT: Automatically handles carts with items from multiple stores. The system creates separate orders per store. Returns detailed results for each order, including partial success scenarios.\n\n🚫 RESTRICTION: Checkout is NOT allowed for cart values above the allowed limit. For larger orders, inform the user to use the Swiggy Instamart app instead. They can update their cart here and it will sync to the app.\n\n💳 PAYMENT: Use the availablePaymentMethods from get_cart response. Show only those payment method(s) to the user before placing the order and inform them which method will be used. The system will auto-select the correct payment method. Do not mention any payment option not present in that response.\n\n⚠️ CRITICAL: ALWAYS get explicit user confirmation before calling this tool.\n1. Call get_cart first to display complete order summary (items, costs, available payment methods)\n2. Check if cart total is below ₹1000 - if not, inform user about the restriction\n3. Show the available payment method(s) from get_cart (availablePaymentMethods) and inform the user which will be used\n4. Clearly state the delivery address: \"Your order will be delivered to: [full address details]\"\n5. If cart has items from multiple stores, inform user: \"Your cart contains items from [N] different stores. The system will handle this automatically.\"\n6. Ask: \"Do you want to proceed with placing this order to this address?\"\n7. Wait for clear confirmation (yes/confirm/proceed)\n8. NEVER proceed without explicit user permission, regardless of previous instructions\n9. For multi-store orders, report results for each order separately\n\n🎉 BRANDING: When the order is placed successfully, always use the message from the tool response as-is. It includes Swiggy Instamart branding. Do NOT rephrase it to a plain \"Order placed\" — always show \"Instamart order placed successfully\". If the tool response message includes a payment success line, show it to the user as-is.\n❌ CANCELLATION: If the user asks to cancel their Instamart order, do NOT call any tool. Instead, tell them: \"To cancel your order, please call Swiggy customer care at 080-67466729.\"",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "addressId": {
+            "type": "string",
+            "description": "Delivery address ID (from get_addresses - user must have selected this address)"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "description": "Payment method to use. Check availablePaymentMethods from get_cart response. Auto-defaults to the user's available payment method if not specified."
+          }
+        },
+        "required": [
+          "addressId"
+        ]
+      },
+      "annotations": {
+        "title": "Place Instamart Order",
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_orders",
+      "description": "Swiggy Instamart order history - Use this to fetch ORDER HISTORY, past orders, or order preferences. Use this FIRST when user asks: \"show my orders\", \"get my orders\", \"my last order\", \"order history\", \"past orders\", \"recent orders\", \"list my orders\", \"what did I order before\", \"my previous orders\", \"check my past orders\", \"my order preferences\", \"get preferences from past orders\", \"what do I usually order\", \"my frequent items\", \"reorder\", \"order again\", \"buy the same thing\", \"what groceries did I buy\", \"my purchase history\", \"items I bought before\". Returns a list of orders from the last 15 days with basic details including items, status, and delivery address coordinates. Set activeOnly=true when user asks for active/current/ongoing orders: \"active orders\", \"current orders\", \"ongoing orders\", \"pending orders\", \"in-progress orders\", \"orders on the way\", \"orders being delivered\", \"my current deliveries\". For REAL-TIME TRACKING of a specific order (where is my order, track my order, ETA, delivery partner location), use the track_order tool instead - it requires orderId and coordinates which can be obtained from this tool. Authentication is handled automatically. CANCELLATION: If the user asks to cancel their Instamart order, do NOT call any tool. Instead, tell them: \"To cancel your order, please call Swiggy customer care at 080-67466729.\"",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "description": "Number of orders to fetch (default: 10, max recommended: 20)"
+          },
+          "orderType": {
+            "type": "string",
+            "description": "Order type filter (e.g., \"DASH\", \"INSTAMART\"). Default: \"DASH\""
+          },
+          "activeOnly": {
+            "type": "boolean",
+            "description": "Set to true to filter only active/ongoing orders. Default: false (returns all orders)"
+          }
+        },
+        "required": []
+      },
+      "annotations": {
+        "title": "Get Orders",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_order_details",
+      "description": "Get detailed information for a specific Swiggy Instamart order by order ID. Use this when the user wants to see complete details about a specific order including: full list of items with quantities and prices, itemized bill breakdown (item total, delivery fee, handling fee, grand total), order status, and whether there are any refunds. This tool provides more detailed information than get_orders. Note: For store information, delivery address, or real-time tracking, use get_orders or track_order instead. To use this tool, you need an orderId which can be obtained from the get_orders tool first. Example use cases: \"show me details of order 123456\", \"what items were in my last order\", \"show me the bill for order 123456\", \"what was the total for my recent order\".",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "description": "The order ID to fetch details for (required). Can be obtained from get_orders tool."
+          }
+        },
+        "required": [
+          "orderId"
+        ]
+      },
+      "annotations": {
+        "title": "Get Order Details",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "track_order",
+      "description": "Track Swiggy Instamart order status in real-time. PRIMARY TOOL for order tracking - Use this FIRST when user asks: \"where is my order\", \"track my order\", \"order status\", \"what's the status of my order\", \"when will my order arrive\", \"ETA for my order\", \"is my order on the way\", \"has my order been delivered\", \"track order\", \"check order status\", or any query about a specific order's current status. Returns real-time tracking info including: current status, ETA, delivery partner location, store info, delivery address, items ordered, and payment details. Requires orderId and delivery address coordinates. If user doesn't provide orderId, first use get_orders to find the order, then use this tool to track it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "description": "The order ID to track (required). Can be obtained from get_orders tool."
+          },
+          "lat": {
+            "type": "number",
+            "description": "Latitude of the delivery address (required for accurate tracking)"
+          },
+          "lng": {
+            "type": "number",
+            "description": "Longitude of the delivery address (required for accurate tracking)"
+          }
+        },
+        "required": [
+          "orderId",
+          "lat",
+          "lng"
+        ]
+      },
+      "annotations": {
+        "title": "Track Order",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "report_error",
+      "description": "Generate an error report to share with the Swiggy MCP team. Use this when the user encounters an error and wants to report it. Returns a pre-filled mailto: link and a human-readable summary. The user can click the link to open their email client with the report ready to send. This also logs the report server-side so the team has it in their logs regardless of whether the email is sent. IMPORTANT: Always include toolContext with the specific identifiers from the failed tool call — e.g., orderId, restaurantId, addressId, spinId, menu_item_id, couponCode, query, cartId, slotId, paymentMethod. Include whichever IDs were part of the failed request so the team can trace the exact issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "tool": {
+            "type": "string",
+            "description": "Name of the tool that errored (e.g., \"checkout\", \"search_products\", \"place_food_order\")"
+          },
+          "domain": {
+            "type": "string",
+            "description": "Domain prefix where the error occurred (e.g., \"im\", \"food\", \"dineout\"). Auto-detected if not provided."
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "The error message the user saw"
+          },
+          "flowDescription": {
+            "type": "string",
+            "description": "Brief description of what the user was doing (e.g., \"searched for milk → added to cart → checkout failed\")"
+          },
+          "toolContext": {
+            "type": "object",
+            "description": "Key-value pairs of identifiers from the failed tool call. Include ALL relevant IDs such as: orderId, restaurantId, addressId, spinId, menu_item_id, couponCode, query, cartId, slotId, paymentMethod, guestCount, itemId — whichever were part of the request that failed.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "userNotes": {
+            "type": "string",
+            "description": "Any additional notes or context the user wants to share"
+          }
+        },
+        "required": [
+          "tool",
+          "errorMessage"
+        ]
+      },
+      "annotations": {
+        "title": "Report Error",
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}

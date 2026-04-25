@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+
+# Build output (will be rebuilt in container)
+dist
+
+# Development files
+*.log
+npm-debug.log*
+.npm
+
+# Environment files (secrets)
+.env
+.env.local
+.env.*.local
+
+# Data directories (should use Docker volumes)
+data
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation and planning
+*.md
+!CLAUDE.md
+docs
+
+# Test files
+__tests__
+*.test.ts
+*.spec.ts
+coverage

@@ -1,0 +1,36 @@
+# Example docker-compose for the Baileys-based bot.
+#
+# Baileys runs in-process, so the only service is the bot itself.
+# The volume keeps the WhatsApp session + SQLite state across restarts
+# (delete the volume to force a re-scan of the QR).
+#
+# Usage:
+#   cp docker-compose.yml.example docker-compose.yml
+#   cp .env.example .env  # fill GEMINI_API_KEY
+#   docker compose up -d --build
+#
+services:
+  bot:
+    build: .
+    container_name: ordering-bot
+    env_file: .env
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ALLOWED_GROUPS: ${ALLOWED_GROUPS:-}
+      ALLOWED_GROUP_SENDERS: ${ALLOWED_GROUP_SENDERS:-}
+      NODE_ENV: production
+    volumes:
+      - order_data:/app/data
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  order_data:
+    name: ordering-data

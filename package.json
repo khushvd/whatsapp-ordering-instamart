@@ -1,0 +1,48 @@
+{
+  "name": "ordering-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/whatsapp-bot.js",
+  "scripts": {
+    "build": "tsc",
+    "start:bot": "node dist/whatsapp-bot.js",
+    "dev:bot": "tsx watch src/whatsapp-bot.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "whatsapp",
+    "swiggy",
+    "instamart",
+    "mcp",
+    "grocery",
+    "bot",
+    "gemini",
+    "baileys"
+  ],
+  "author": "Khushvardhan Dembla",
+  "license": "MIT",
+  "description": "WhatsApp → Swiggy Instamart ordering bot (MCP) with voice-note accumulation and favorites cache.",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@hapi/boom": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.8",
+    "@types/socket.io": "^3.0.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "link-preview-js": "^3.2.0",
+    "pino": "^10.3.1",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "tsx": "^4.21.0"
+  }
+}
